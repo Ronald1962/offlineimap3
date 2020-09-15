@@ -22,7 +22,7 @@ import time
 from sys import exc_info
 from offlineimap import imaputil, imaplibutil, emailutil, OfflineImapError
 from offlineimap import globals
-from imaplib2 import MonthNames
+from imaplib import Months
 from .Base import BaseFolder
 
 # Globals
@@ -230,7 +230,7 @@ class IMAPFolder(BaseFolder):
         a = self.getfullIMAPname()
         res_type, imapdata = imapobj.select(a, True, True)
 
-        # imaplib2 returns the type as string, like "OK" but
+        # imaplib returns the type as string, like "OK" but
         # returns imapdata as list of bytes, like [b'0'] so we need decode it
         # to use the existing code
         imapdata = [x.decode('utf-8') for x in imapdata]
@@ -247,7 +247,7 @@ class IMAPFolder(BaseFolder):
         elif min_date is not None:
             # Find out what the oldest message is that we should look at.
             conditions.append("SINCE %02d-%s-%d" % (
-                min_date[2], MonthNames[min_date[1]], min_date[0]))
+                min_date[2], Months[min_date[1]], min_date[0]))
         # 3. maxsize condition.
         maxsize = self.getmaxsize()
         if maxsize is not None:
@@ -279,9 +279,9 @@ class IMAPFolder(BaseFolder):
                 return  # No messages to sync.
 
             # Get the flags and UIDs for these. single-quotes prevent
-            # imaplib2 from quoting the sequence.
+            # imaplib from quoting the sequence.
             fetch_msg = "%s" % msgsToFetch
-            self.ui.debug('imap', "calling imaplib2 fetch command: %s %s" %
+            self.ui.debug('imap', "calling imaplib fetch command: %s %s" %
                           (fetch_msg, '(FLAGS UID INTERNALDATE)'))
             res_type, response = imapobj.fetch(
                 fetch_msg, '(FLAGS UID INTERNALDATE)')

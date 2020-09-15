@@ -27,7 +27,7 @@ from hashlib import sha512, sha384, sha256, sha224, sha1
 import rfc6555
 from offlineimap import OfflineImapError
 from offlineimap.ui import getglobalui
-from imaplib2 import IMAP4, IMAP4_SSL, InternalDate
+from imaplib import IMAP4, IMAP4_SSL, InternalDate
 
 
 class UsefulIMAPMixIn:
@@ -67,11 +67,11 @@ class UsefulIMAPMixIn:
             raise OfflineImapError(errstr, severity)
         return result
 
-    # Overrides private function from IMAP4 (@imaplib2)
+    # Overrides private function from IMAP4 (@imaplib)
     def _mesg(self, s, tn=None, secs=None):
         new_mesg(self, s, tn, secs)
 
-    # Overrides private function from IMAP4 (@imaplib2)
+    # Overrides private function from IMAP4 (@imaplib)
     def open_socket(self):
         """open_socket()
         Open socket choosing first address family available."""
@@ -131,7 +131,7 @@ class IMAP4_Tunnel(UsefulIMAPMixIn, IMAP4):
         self.process = subprocess.Popen(host, shell=True, close_fds=True,
                                         stdin=subprocess.PIPE, stdout=subprocess.PIPE)
         (self.outfd, self.infd) = (self.process.stdin, self.process.stdout)
-        # imaplib2 polls on this fd
+        # imaplib polls on this fd
         self.read_fd = self.infd.fileno()
 
         self.set_nonblocking(self.read_fd)
@@ -195,10 +195,10 @@ class WrappedIMAP4_SSL(UsefulIMAPMixIn, IMAP4_SSL):
             self._fingerprint = [self._fingerprint]
         if 'fingerprint' in kwargs:
             del kwargs['fingerprint']
-        super(WrappedIMAP4_SSL, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
     def open(self, host=None, port=None):
-        if not self.ca_certs and not self._fingerprint:
+        if not self._fingerprint:
             raise OfflineImapError("No CA certificates "
                                    "and no server fingerprints configured.  "
                                    "You must configure at least something, otherwise "

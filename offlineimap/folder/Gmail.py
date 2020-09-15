@@ -126,7 +126,7 @@ class GmailFolder(IMAPFolder):
                 return  # No messages to sync
 
             # Get the flags and UIDs for these. single-quotes prevent
-            # imaplib2 from quoting the sequence.
+            # imaplib from quoting the sequence.
             #
             # NB: msgsToFetch are sequential numbers, not UID's
             res_type, response = imapobj.fetch("'%s'" % msgsToFetch,
