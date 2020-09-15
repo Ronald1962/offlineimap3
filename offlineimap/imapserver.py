@@ -27,7 +27,7 @@ import errno
 import socket
 from socket import gaierror
 from sys import exc_info
-from ssl import SSLError, cert_time_to_seconds
+import ssl
 from threading import Lock, BoundedSemaphore, Thread, Event, currentThread
 import offlineimap.accounts
 from offlineimap import imaplibutil, imaputil, threadutil, OfflineImapError
@@ -347,7 +347,7 @@ class IMAPServer:
     # and will be handled by the calling code:
     #
     # - imapobj.error means that there was some error that
-    #   comes from imaplib2;
+    #   comes from imaplib;
     #
     # - OfflineImapError means that function detected some
     #   problem by itself.
@@ -480,7 +480,7 @@ class IMAPServer:
         # cert expired?
         notafter = cert.get('notAfter')
         if notafter:
-            if time.time() >= cert_time_to_seconds(notafter):
+            if time.time() >= ssl.cert_time_to_seconds(notafter):
                 return '%s certificate expired %s' % (errstr, notafter)
 
         # First read commonName
@@ -560,6 +560,7 @@ class IMAPServer:
                         self.repos.getname(), self.hostname, self.port)
                     self.ui.debug('imap', "%s: level '%s', version '%s'" %
                                   (self.repos.getname(), self.tlslevel, self.sslversion))
+                    ssl_context = ssl.SSLContext(protocol=ssl.PROTOCOL_TLS)
                     imapobj = imaplibutil.WrappedIMAP4_SSL(
                         host=self.hostname,
                         port=self.port,
@@ -572,8 +573,9 @@ class IMAPServer:
                         timeout=socket.getdefaulttimeout(),
                         fingerprint=self.fingerprint,
                         use_socket=self.proxied_socket,
-                        tls_level=self.tlslevel,
+                        # tls_level=self.tlslevel,
                         af=self.af,
+                        ssl_context=ssl_context,
                     )
                 else:
                     self.ui.connecting(
@@ -646,7 +648,7 @@ class IMAPServer:
                          (self.hostname, self.repos)
                 raise OfflineImapError(reason, severity, exc_info()[2])
 
-            elif isinstance(e, SSLError) and e.errno == errno.EPERM:
+            elif isinstance(e, ssl.SSLError) and e.errno == errno.EPERM:
                 # SSL unknown protocol error
                 # happens e.g. when connecting via SSL to a non-SSL service
                 if self.port != 993:
@@ -765,7 +767,7 @@ class IMAPServer:
         self.connectionlock.acquire()
         self.assignedconnections.remove(connection)
         # Don't reuse broken connections
-        if connection.Terminate or drop_conn:
+        if drop_conn:
             connection.logout()
         else:
             self.availableconnections.append(connection)
@@ -837,7 +839,7 @@ class IdleThread:
         """Invoke IDLE mode until timeout or self.stop() is invoked."""
 
         def callback(args):
-            """IDLE callback function invoked by imaplib2.
+            """IDLE callback function invoked by imaplib.
 
             This is invoked when a) The IMAP server tells us something
             while in IDLE mode, b) we get an Exception (e.g. on dropped
