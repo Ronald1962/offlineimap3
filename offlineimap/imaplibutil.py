@@ -31,22 +31,13 @@ from imaplib import IMAP4, IMAP4_SSL, InternalDate
 
 
 class UsefulIMAPMixIn:
-    def __getselectedfolder(self):
-        if self.state == 'SELECTED':
-            return self.mailbox
-        return None
 
     def select(self, mailbox='INBOX', readonly=False, force=False):
         """Selects a mailbox on the IMAP server
 
         :returns: 'OK' on success, nothing if the folder was already
-        selected or raises an :exc:`OfflineImapError`."""
-
-        if self.__getselectedfolder() == mailbox and \
-                self.is_readonly == readonly and \
-                not force:
-            # No change; return.
-            return
+        selected or raises an :exc:`OfflineImapError`.
+        """
         try:
             result = super(UsefulIMAPMixIn, self).select(mailbox, readonly)
         except self.readonly as e:
