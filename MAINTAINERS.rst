@@ -60,6 +60,10 @@ Contacts
   - github: spaetz
   - other: left the project but still responding
 
+- Ronald Portier
+  - email: ronald at portier.eu
+  - github: nl66278
+
 
 Testers
 =======

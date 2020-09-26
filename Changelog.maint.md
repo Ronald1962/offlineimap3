@@ -15,6 +15,13 @@ This is the Changelog of the maintenance branch.
 	If anyone volunteers to maintain it and backport patches, let us know!
 
 
+### OfflineIMAP v7.0.1 ((2020-09-24)
+
+#### Changes
+
+* concurrency: do away with threading
+
+
 ### OfflineIMAP v6.7.0.3 (2016-07-26)
 
 #### Bug Fixes

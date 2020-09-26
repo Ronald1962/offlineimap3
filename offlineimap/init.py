@@ -17,7 +17,6 @@
 
 import os
 import sys
-import threading
 import signal
 import socket
 import logging
@@ -28,10 +27,8 @@ from optparse import OptionParser
 import offlineimap
 import imaplib
 
-# Ensure that `ui` gets loaded before `threadutil` in order to
-# break the circular dependency between `threadutil` and `Curses`.
 from offlineimap.ui import UI_LIST, setglobalui, getglobalui
-from offlineimap import threadutil, accounts, folder, mbnames
+from offlineimap import accounts, folder, mbnames
 from offlineimap import globals as glob
 from offlineimap.CustomConfig import CustomConfigParser
 from offlineimap.utils import stacktrace
@@ -40,26 +37,6 @@ from offlineimap.folder.IMAP import MSGCOPY_NAMESPACE
 
 ACCOUNT_LIMITED_THREAD_NAME = 'MAX_ACCOUNTS'
 PYTHON_VERSION = sys.version.split(' ')[0]
-
-
-def syncitall(list_accounts, config):
-    """The target when in multithreading mode for running accounts threads."""
-
-    threads = threadutil.accountThreads()  # The collection of accounts threads.
-    for accountname in list_accounts:
-        # Start a new thread per account and store it in the collection.
-        account = accounts.SyncableAccount(config, accountname)
-        thread = threadutil.InstanceLimitedThread(
-            ACCOUNT_LIMITED_THREAD_NAME,
-            target=account.syncrunner,
-            name="Account sync %s" % accountname
-        )
-        thread.setDaemon(True)
-        # The add() method expects a started thread.
-        thread.start()
-        threads.add(thread)
-    # Wait for the threads to finish.
-    threads.wait()  # Blocks until all accounts are processed.
 
 
 class OfflineImap:
@@ -118,11 +95,6 @@ class OfflineImap:
                           action="store_true", dest="diagnostics",
                           default=False,
                           help="output information on the configured email repositories")
-
-        parser.add_option("-1",
-                          action="store_true", dest="singlethreading",
-                          default=False,
-                          help="(the number one) disable all multithreading operations")
 
         parser.add_option("-P", dest="profiledir", metavar="DIR",
                           help="sets OfflineIMAP into profile mode.")
@@ -218,10 +190,6 @@ class OfflineImap:
 
         # Profile mode chosen?
         if options.profiledir:
-            if not options.singlethreading:
-                # TODO, make use of chosen ui for logging
-                logging.warning("Profile mode: Forcing to singlethreaded.")
-                options.singlethreading = True
             if os.path.exists(options.profiledir):
                 # TODO, make use of chosen ui for logging
                 logging.warning("Profile mode: Directory '%s' already exists!" %
@@ -286,12 +254,6 @@ class OfflineImap:
             self.ui.logger.setLevel(logging.DEBUG)
             if options.debugtype.lower() == 'all':
                 options.debugtype = 'imap,maildir,thread'
-            # Force single threading?
-            if not ('thread' in options.debugtype.split(',')
-                    and not options.singlethreading):
-                self.ui._msg("Debug mode: Forcing to singlethreaded.")
-                options.singlethreading = True
-
             debugtypes = options.debugtype.split(',') + ['']
             for dtype in debugtypes:
                 dtype = dtype.strip()
@@ -321,40 +283,16 @@ class OfflineImap:
                 config.set(remote_repo_section, "folderfilter", folderfilter)
                 config.set(remote_repo_section, "folderincludes",
                            folderincludes)
-
         if options.logfile:
             sys.stderr = self.ui.logfile
-
         socktimeout = config.getdefaultint("general", "socktimeout", 0)
         if socktimeout > 0:
             socket.setdefaulttimeout(socktimeout)
-
-        threadutil.initInstanceLimit(
-            ACCOUNT_LIMITED_THREAD_NAME,
-            config.getdefaultint('general', 'maxsyncaccounts', 1)
-        )
-
-        for reposname in config.getsectionlist('Repository'):
-            # Limit the number of threads. Limitation on usage is handled at the
-            # imapserver level.
-            for namespace in [accounts.FOLDER_NAMESPACE + reposname,
-                              MSGCOPY_NAMESPACE + reposname]:
-                if options.singlethreading:
-                    threadutil.initInstanceLimit(namespace, 1)
-                else:
-                    threadutil.initInstanceLimit(
-                        namespace,
-                        config.getdefaultint(
-                            'Repository ' + reposname,
-                            'maxconnections', 2)
-                    )
         self.config = config
         return options, args
 
     def __dumpstacks(self, context=1, sighandler_deep=2):
         """ Signal handler: dump a stack trace for each existing thread."""
-
-        currentThreadId = threading.currentThread().ident
 
         def unique_count(l):
             d = collections.defaultdict(lambda: 0)
@@ -432,9 +370,7 @@ class OfflineImap:
                                    "take some time), press CTRL-C three "
                                    "times to shutdown immediately")
                 accounts.Account.set_abort_event(self.config, 3)
-                if 'thread' in self.ui.debuglist:
-                    self.__dumpstacks(5)
-
+                self.__dumpstacks(5)
                 # Abort after three Ctrl-C keystrokes
                 self.num_sigterm += 1
                 if self.num_sigterm >= 3:
@@ -458,20 +394,7 @@ class OfflineImap:
             activeaccounts = self._get_activeaccounts(options)
             mbnames.init(self.config, self.ui, options.dryrun)
 
-            if options.singlethreading:
-                # Singlethreaded.
-                self.__sync_singlethreaded(activeaccounts, options.profiledir)
-            else:
-                # Multithreaded.
-                t = threadutil.ExitNotifyThread(
-                    target=syncitall,
-                    name='Sync Runner',
-                    args=(activeaccounts, self.config,)
-                )
-                # Special exit message for the monitor to stop looping.
-                t.exit_message = threadutil.STOP_MONITOR
-                t.start()
-                threadutil.monitor()
+            self.__sync_singlethreaded(activeaccounts, options.profiledir)
 
             # All sync are done.
             mbnames.write()
@@ -491,8 +414,6 @@ class OfflineImap:
         """
         for accountname in list_accounts:
             account = accounts.SyncableAccount(self.config, accountname)
-            threading.currentThread().name = \
-                "Account sync %s" % account.getname()
             if not profiledir:
                 account.syncrunner()
             # Profile mode.
