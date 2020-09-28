@@ -207,17 +207,19 @@ class IMAPServer:
             raise OfflineImapError("No username provided for '%s'"
                                    % self.repos.getname(),
                                    OfflineImapError.ERROR.REPO)
-
         passwd = self.__getpassword()
         authz = ''
         NULL = '\x00'
         if self.user_identity is not None:
             authz = self.user_identity
-
+        (authz, authc, passwd) = (
+            var.decode("utf-8") if isinstance(var, bytes) else var
+            for var in (authz, authc, passwd)
+        )
         retval = NULL.join((authz, authc, passwd))
         logsafe_retval = NULL.join((authz, authc, '(passwd hidden for log)'))
         self.ui.debug('imap', '__plainhandler: returning %s' % logsafe_retval)
-        return retval
+        return retval.encode("utf-8")
 
     def __xoauth2handler(self, response):
         now = datetime.datetime.now()

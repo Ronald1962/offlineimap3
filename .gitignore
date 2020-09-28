@@ -6,6 +6,7 @@
 /website/
 /wiki/
 # Generated files.
+*.log
 *.html
 *.css
 /docs/dev-doc/
