@@ -14,7 +14,4 @@ __homepage__ = "http://www.offlineimap.org"
 
 banner = __bigcopyright__
 
-from offlineimap.error import OfflineImapError
-# put this last, so we don't run into circular dependencies using
-# e.g. offlineimap.__version__.
 from offlineimap.init import OfflineImap
