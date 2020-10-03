@@ -31,11 +31,12 @@ class GmailMaildirFolder(MaildirFolder):
         super(GmailMaildirFolder, self).__init__(root, name, sep, repository)
 
         # The header under which labels are stored.
-        self.labelsheader = self.repository.account.getconf('labelsheader',
-                                                            'X-Keywords')
+        self.labelsheader = self.repository.account.getconf(
+            "labelsheader", "X-Keywords"
+        )
 
         # Enables / disables label sync.
-        self.synclabels = self.repository.account.getconfboolean('synclabels', 0)
+        self.synclabels = self.repository.account.getconfboolean("synclabels", 0)
 
         # If synclabels is enabled, add a 4th pass to sync labels.
         if self.synclabels:
@@ -47,66 +48,72 @@ class GmailMaildirFolder(MaildirFolder):
         Checks uids, flags and mtimes"""
 
         if self._utime_from_header is True:
-            raise Exception("GmailMaildir does not support quick mode"
-                            " when 'utime_from_header' is enabled.")
+            raise Exception(
+                "GmailMaildir does not support quick mode"
+                " when 'utime_from_header' is enabled."
+            )
 
         self.cachemessagelist()
         # Folder has different uids than statusfolder => TRUE.
-        if sorted(self.getmessageuidlist()) != \
-                sorted(statusfolder.getmessageuidlist()):
+        if sorted(self.getmessageuidlist()) != sorted(statusfolder.getmessageuidlist()):
             return True
         # Check for flag changes, it's quick on a Maildir.
         for (uid, message) in list(self.getmessagelist().items()):
-            if message['flags'] != statusfolder.getmessageflags(uid):
+            if message["flags"] != statusfolder.getmessageflags(uid):
                 return True
         # check for newer mtimes. it is also fast
         for (uid, message) in list(self.getmessagelist().items()):
-            if message['mtime'] > statusfolder.getmessagemtime(uid):
+            if message["mtime"] > statusfolder.getmessagemtime(uid):
                 return True
         return False  # Nope, nothing changed.
 
     # Interface from BaseFolder
     def msglist_item_initializer(self, uid):
-        return {'flags': set(), 'labels': set(), 'labels_cached': False,
-                'filename': '/no-dir/no-such-file/', 'mtime': 0}
+        return {
+            "flags": set(),
+            "labels": set(),
+            "labels_cached": False,
+            "filename": "/no-dir/no-such-file/",
+            "mtime": 0,
+        }
 
     def cachemessagelist(self, min_date=None, min_uid=None):
         if self.ismessagelistempty():
-            self.messagelist = self._scanfolder(min_date=min_date,
-                                                min_uid=min_uid)
+            self.messagelist = self._scanfolder(min_date=min_date, min_uid=min_uid)
 
         # Get mtimes
         if self.synclabels:
             for uid, msg in list(self.messagelist.items()):
-                filepath = os.path.join(self.getfullname(), msg['filename'])
-                msg['mtime'] = int(os.stat(filepath).st_mtime)
+                filepath = os.path.join(self.getfullname(), msg["filename"])
+                msg["mtime"] = int(os.stat(filepath).st_mtime)
 
     def getmessagelabels(self, uid):
         # Labels are not cached in cachemessagelist because it is too slow.
-        if not self.messagelist[uid]['labels_cached']:
-            filename = self.messagelist[uid]['filename']
+        if not self.messagelist[uid]["labels_cached"]:
+            filename = self.messagelist[uid]["filename"]
             filepath = os.path.join(self.getfullname(), filename)
 
             if not os.path.exists(filepath):
                 return set()
 
-            file = open(filepath, 'rt')
+            file = open(filepath, "rt")
             content = file.read()
             file.close()
 
-            self.messagelist[uid]['labels'] = set()
+            self.messagelist[uid]["labels"] = set()
             for hstr in self.getmessageheaderlist(content, self.labelsheader):
-                self.messagelist[uid]['labels'].update(
-                    imaputil.labels_from_header(self.labelsheader, hstr))
-            self.messagelist[uid]['labels_cached'] = True
+                self.messagelist[uid]["labels"].update(
+                    imaputil.labels_from_header(self.labelsheader, hstr)
+                )
+            self.messagelist[uid]["labels_cached"] = True
 
-        return self.messagelist[uid]['labels']
+        return self.messagelist[uid]["labels"]
 
     def getmessagemtime(self, uid):
-        if 'mtime' not in self.messagelist[uid]:
+        if "mtime" not in self.messagelist[uid]:
             return 0
         else:
-            return self.messagelist[uid]['mtime']
+            return self.messagelist[uid]["mtime"]
 
     def savemessage(self, uid, content, flags, rtime):
         """Writes a new message, with the specified uid.
@@ -116,21 +123,21 @@ class GmailMaildirFolder(MaildirFolder):
         savemessage is never called in a dryrun mode."""
 
         if not self.synclabels:
-            return super(GmailMaildirFolder, self).savemessage(uid, content,
-                                                               flags, rtime)
+            return super(GmailMaildirFolder, self).savemessage(
+                uid, content, flags, rtime
+            )
 
         labels = set()
         for hstr in self.getmessageheaderlist(content, self.labelsheader):
             labels.update(imaputil.labels_from_header(self.labelsheader, hstr))
 
-        ret = super(GmailMaildirFolder, self).savemessage(uid, content, flags,
-                                                          rtime)
+        ret = super(GmailMaildirFolder, self).savemessage(uid, content, flags, rtime)
 
         # Update the mtime and labels.
-        filename = self.messagelist[uid]['filename']
+        filename = self.messagelist[uid]["filename"]
         filepath = os.path.join(self.getfullname(), filename)
-        self.messagelist[uid]['mtime'] = int(os.stat(filepath).st_mtime)
-        self.messagelist[uid]['labels'] = labels
+        self.messagelist[uid]["mtime"] = int(os.stat(filepath).st_mtime)
+        self.messagelist[uid]["labels"] = labels
         return ret
 
     def savemessagelabels(self, uid, labels, ignorelabels=set()):
@@ -139,17 +146,16 @@ class GmailMaildirFolder(MaildirFolder):
         Note that this function does not check against dryrun settings,
         so you need to ensure that it is never called in a dryrun mode."""
 
-        filename = self.messagelist[uid]['filename']
+        filename = self.messagelist[uid]["filename"]
         filepath = os.path.join(self.getfullname(), filename)
 
-        file = open(filepath, 'rt')
+        file = open(filepath, "rt")
         content = file.read()
         file.close()
 
         oldlabels = set()
         for hstr in self.getmessageheaderlist(content, self.labelsheader):
-            oldlabels.update(imaputil.labels_from_header(self.labelsheader,
-                                                         hstr))
+            oldlabels.update(imaputil.labels_from_header(self.labelsheader, hstr))
 
         labels = labels - ignorelabels
         ignoredlabels = oldlabels & ignorelabels
@@ -160,13 +166,13 @@ class GmailMaildirFolder(MaildirFolder):
             return
 
         # Change labels into content.
-        labels_str = imaputil.format_labels_string(self.labelsheader,
-                                                   sorted(labels | ignoredlabels))
+        labels_str = imaputil.format_labels_string(
+            self.labelsheader, sorted(labels | ignoredlabels)
+        )
 
         # First remove old labels header, and then add the new one.
         content = self.deletemessageheaders(content, self.labelsheader)
-        content = self.addmessageheader(content, '\n', self.labelsheader,
-                                        labels_str)
+        content = self.addmessageheader(content, "\n", self.labelsheader, labels_str)
 
         mtime = int(os.stat(filepath).st_mtime)
 
@@ -179,18 +185,19 @@ class GmailMaildirFolder(MaildirFolder):
         try:
             os.rename(tmppath, filepath)
         except OSError as e:
-            raise OfflineImapError("Can't rename file '%s' to '%s': %s" %
-                                   (tmppath, filepath, e[1]),
-                                   OfflineImapError.ERROR.FOLDER,
-                                   exc_info()[2])
+            raise OfflineImapError(
+                "Can't rename file '%s' to '%s': %s" % (tmppath, filepath, e[1]),
+                OfflineImapError.ERROR.FOLDER,
+                exc_info()[2],
+            )
 
         # If utime_from_header=true, we don't want to change the mtime.
         if self._utime_from_header and mtime:
             os.utime(filepath, (mtime, mtime))
 
         # save the new mtime and labels
-        self.messagelist[uid]['mtime'] = int(os.stat(filepath).st_mtime)
-        self.messagelist[uid]['labels'] = labels
+        self.messagelist[uid]["mtime"] = int(os.stat(filepath).st_mtime)
+        self.messagelist[uid]["labels"] = labels
 
     def copymessageto(self, uid, dstfolder, statusfolder, register=1):
         """Copies a message from self to dst if needed, updating the status
@@ -209,8 +216,9 @@ class GmailMaildirFolder(MaildirFolder):
         realcopy = uid > 0 and not dstfolder.uidexists(uid)
 
         # First copy the message.
-        super(GmailMaildirFolder, self).copymessageto(uid, dstfolder,
-                                                      statusfolder, register)
+        super(GmailMaildirFolder, self).copymessageto(
+            uid, dstfolder, statusfolder, register
+        )
 
         # Sync labels and mtime now when the message is new (the embedded labels
         # are up to date, and have already propagated to the remote server.  For
@@ -219,8 +227,9 @@ class GmailMaildirFolder(MaildirFolder):
         if realcopy and self.synclabels:
             try:
                 labels = dstfolder.getmessagelabels(uid)
-                statusfolder.savemessagelabels(uid, labels,
-                                               mtime=self.getmessagemtime(uid))
+                statusfolder.savemessagelabels(
+                    uid, labels, mtime=self.getmessagemtime(uid)
+                )
 
             # dstfolder is not GmailMaildir.
             except NotImplementedError:
@@ -329,7 +338,7 @@ class GmailMaildirFolder(MaildirFolder):
                 if self.repository.account.dryrun:
                     continue  # Don't actually update statusfolder.
 
-                filename = self.messagelist[uid]['filename']
+                filename = self.messagelist[uid]["filename"]
                 filepath = os.path.join(self.getfullname(), filename)
                 mtimes[uid] = int(os.stat(filepath).st_mtime)
 
@@ -337,5 +346,7 @@ class GmailMaildirFolder(MaildirFolder):
             statusfolder.savemessagesmtimebulk(mtimes)
 
         except NotImplementedError:
-            self.ui.warn("Can't sync labels. You need to configure a remote "
-                         "repository of type Gmail.")
+            self.ui.warn(
+                "Can't sync labels. You need to configure a remote "
+                "repository of type Gmail."
+            )

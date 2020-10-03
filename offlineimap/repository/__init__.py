@@ -34,21 +34,22 @@ class Repository:
         :param account: :class:`Account`
         :param regtype: 'remote', 'local', or 'status'"""
 
-        if reqtype == 'remote':
-            name = account.getconf('remoterepository')
+        if reqtype == "remote":
+            name = account.getconf("remoterepository")
             # We don't support Maildirs on the remote side.
-            typemap = {'IMAP': IMAPRepository,
-                       'Gmail': GmailRepository}
+            typemap = {"IMAP": IMAPRepository, "Gmail": GmailRepository}
 
-        elif reqtype == 'local':
-            name = account.getconf('localrepository')
-            typemap = {'IMAP': MappedIMAPRepository,
-                       'Maildir': MaildirRepository,
-                       'GmailMaildir': GmailMaildirRepository}
+        elif reqtype == "local":
+            name = account.getconf("localrepository")
+            typemap = {
+                "IMAP": MappedIMAPRepository,
+                "Maildir": MaildirRepository,
+                "GmailMaildir": GmailMaildirRepository,
+            }
 
-        elif reqtype == 'status':
+        elif reqtype == "status":
             # create and return a LocalStatusRepository.
-            name = account.getconf('localrepository')
+            name = account.getconf("localrepository")
             return LocalStatusRepository(name, account)
 
         else:
@@ -58,20 +59,22 @@ class Repository:
         # Get repository type.
         config = account.getconfig()
         try:
-            repostype = config.get('Repository ' + name, 'type').strip()
+            repostype = config.get("Repository " + name, "type").strip()
         except NoSectionError:
-            errstr = ("Could not find section '%s' in configuration. Required "
-                      "for account '%s'." % ('Repository %s' % name, account))
-            raise OfflineImapError(errstr, OfflineImapError.ERROR.REPO,
-                                   exc_info()[2])
+            errstr = (
+                "Could not find section '%s' in configuration. Required "
+                "for account '%s'." % ("Repository %s" % name, account)
+            )
+            raise OfflineImapError(errstr, OfflineImapError.ERROR.REPO, exc_info()[2])
 
         try:
             repo = typemap[repostype]
         except KeyError:
-            errstr = "'%s' repository not supported for '%s' repositories." % \
-                     (repostype, reqtype)
-            raise OfflineImapError(errstr, OfflineImapError.ERROR.REPO,
-                                   exc_info()[2])
+            errstr = "'%s' repository not supported for '%s' repositories." % (
+                repostype,
+                reqtype,
+            )
+            raise OfflineImapError(errstr, OfflineImapError.ERROR.REPO, exc_info()[2])
 
         return repo(name, account)
 

@@ -11,24 +11,24 @@ class ConstProxy:
     that can be attached to each instance only once."""
 
     def __init__(self):
-        self.__dict__['__source'] = None
+        self.__dict__["__source"] = None
 
     def __getattr__(self, name):
-        src = self.__dict__['__source']
+        src = self.__dict__["__source"]
         if src is None:
             raise ValueError("using non-initialized ConstProxy() object")
         return copy.deepcopy(getattr(src, name))
 
     def __setattr__(self, name, value):
-        raise AttributeError("tried to set '%s' to '%s' for constant object" %
-                             (name, value))
+        raise AttributeError(
+            "tried to set '%s' to '%s' for constant object" % (name, value)
+        )
 
     def __delattr__(self, name):
-        raise RuntimeError("tried to delete field '%s' from constant object" %
-                           name)
+        raise RuntimeError("tried to delete field '%s' from constant object" % name)
 
     def set_source(self, source):
         """ Sets source object for this instance. """
-        if self.__dict__['__source'] is not None:
+        if self.__dict__["__source"] is not None:
             raise ValueError("source object is already set")
-        self.__dict__['__source'] = source
+        self.__dict__["__source"] = source

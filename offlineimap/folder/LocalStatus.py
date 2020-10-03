@@ -28,14 +28,13 @@ class LocalStatusFolder(BaseFolder):
     magicline = "OFFLINEIMAP LocalStatus CACHE DATA - DO NOT MODIFY - FORMAT %d"
 
     def __init__(self, name, repository):
-        self.sep = '.'  # needs to be set before super.__init__()
+        self.sep = "."  # needs to be set before super.__init__()
         super(LocalStatusFolder, self).__init__(name, repository)
         self.root = repository.root
         self.filename = os.path.join(self.getroot(), self.getfolderbasename())
         self.savelock = threading.Lock()
         # Should we perform fsyncs as often as possible?
-        self.doautosave = self.config.getdefaultboolean(
-            "general", "fsync", False)
+        self.doautosave = self.config.getdefaultboolean("general", "fsync", False)
 
     # Interface from BaseFolder
     def storesmessages(self):
@@ -50,7 +49,7 @@ class LocalStatusFolder(BaseFolder):
 
     # Interface from BaseFolder
     def msglist_item_initializer(self, uid):
-        return {'uid': uid, 'flags': set(), 'labels': set(), 'time': 0, 'mtime': 0}
+        return {"uid": uid, "flags": set(), "labels": set(), "time": 0, "mtime": 0}
 
     def readstatus_v1(self, fp):
         """Read status folder in format version 1.
@@ -62,16 +61,15 @@ class LocalStatusFolder(BaseFolder):
         for line in fp:
             line = line.strip()
             try:
-                uid, flags = line.split(':')
+                uid, flags = line.split(":")
                 uid = int(uid)
                 flags = set(flags)
             except ValueError:
-                errstr = ("Corrupt line '%s' in cache file '%s'" %
-                          (line, self.filename))
+                errstr = "Corrupt line '%s' in cache file '%s'" % (line, self.filename)
                 self.ui.warn(errstr)
                 raise ValueError(errstr, exc_info()[2])
             self.messagelist[uid] = self.msglist_item_initializer(uid)
-            self.messagelist[uid]['flags'] = flags
+            self.messagelist[uid]["flags"] = flags
 
     def readstatus(self, fp):
         """Read status file in the current format.
@@ -83,20 +81,21 @@ class LocalStatusFolder(BaseFolder):
         for line in fp:
             line = line.strip()
             try:
-                uid, flags, mtime, labels = line.split('|')
+                uid, flags, mtime, labels = line.split("|")
                 uid = int(uid)
                 flags = set(flags)
                 mtime = int(mtime)
-                labels = set([lb.strip() for lb in labels.split(',') if len(lb.strip()) > 0])
+                labels = set(
+                    [lb.strip() for lb in labels.split(",") if len(lb.strip()) > 0]
+                )
             except ValueError:
-                errstr = "Corrupt line '%s' in cache file '%s'" % \
-                         (line, self.filename)
+                errstr = "Corrupt line '%s' in cache file '%s'" % (line, self.filename)
                 self.ui.warn(errstr)
                 raise ValueError(errstr, exc_info()[2])
             self.messagelist[uid] = self.msglist_item_initializer(uid)
-            self.messagelist[uid]['flags'] = flags
-            self.messagelist[uid]['mtime'] = mtime
-            self.messagelist[uid]['labels'] = labels
+            self.messagelist[uid]["flags"] = flags
+            self.messagelist[uid]["mtime"] = mtime
+            self.messagelist[uid]["labels"] = labels
 
     # Interface from BaseFolder
     def cachemessagelist(self):
@@ -116,8 +115,10 @@ class LocalStatusFolder(BaseFolder):
 
             # Convert from format v1.
             elif line == (self.magicline % 1):
-                self.ui._msg('Upgrading LocalStatus cache from version 1 '
-                             'to version 2 for %s:%s' % (self.repository, self))
+                self.ui._msg(
+                    "Upgrading LocalStatus cache from version 1 "
+                    "to version 2 for %s:%s" % (self.repository, self)
+                )
                 self.readstatus_v1(cachefd)
                 cachefd.close()
                 self.save()
@@ -144,7 +145,7 @@ class LocalStatusFolder(BaseFolder):
             cachefd.close()
             return
 
-        assert (line == (self.magicline % self.cur_version))
+        assert line == (self.magicline % self.cur_version)
         self.readstatus(cachefd)
         cachefd.close()
 
@@ -160,8 +161,7 @@ class LocalStatusFolder(BaseFolder):
         try:
             os.unlink(self.filename)
         except OSError as e:
-            self.ui.debug('', "could not remove file %s: %s" %
-                          (self.filename, e))
+            self.ui.debug("", "could not remove file %s: %s" % (self.filename, e))
 
     def save(self):
         """Save changed data to disk. For this backend it is the same as saveall."""
@@ -175,9 +175,11 @@ class LocalStatusFolder(BaseFolder):
             cachefd = open(self.filename + ".tmp", "wt")
             cachefd.write((self.magicline % self.cur_version) + "\n")
             for msg in list(self.messagelist.values()):
-                flags = ''.join(sorted(msg['flags']))
-                labels = ', '.join(sorted(msg['labels']))
-                cachefd.write("%s|%s|%d|%s\n" % (msg['uid'], flags, msg['mtime'], labels))
+                flags = "".join(sorted(msg["flags"]))
+                labels = ", ".join(sorted(msg["labels"]))
+                cachefd.write(
+                    "%s|%s|%d|%s\n" % (msg["uid"], flags, msg["mtime"], labels)
+                )
             cachefd.flush()
             if self.doautosave:
                 os.fsync(cachefd.fileno())
@@ -206,61 +208,61 @@ class LocalStatusFolder(BaseFolder):
             return uid
 
         self.messagelist[uid] = self.msglist_item_initializer(uid)
-        self.messagelist[uid]['flags'] = flags
-        self.messagelist[uid]['time'] = rtime
-        self.messagelist[uid]['mtime'] = mtime
-        self.messagelist[uid]['labels'] = labels
+        self.messagelist[uid]["flags"] = flags
+        self.messagelist[uid]["time"] = rtime
+        self.messagelist[uid]["mtime"] = mtime
+        self.messagelist[uid]["labels"] = labels
         self.save()
         return uid
 
     # Interface from BaseFolder
     def getmessageflags(self, uid):
-        return self.messagelist[uid]['flags']
+        return self.messagelist[uid]["flags"]
 
     # Interface from BaseFolder
     def getmessagetime(self, uid):
-        return self.messagelist[uid]['time']
+        return self.messagelist[uid]["time"]
 
     # Interface from BaseFolder
     def savemessageflags(self, uid, flags):
-        self.messagelist[uid]['flags'] = flags
+        self.messagelist[uid]["flags"] = flags
         self.save()
 
     def savemessagelabels(self, uid, labels, mtime=None):
-        self.messagelist[uid]['labels'] = labels
+        self.messagelist[uid]["labels"] = labels
         if mtime:
-            self.messagelist[uid]['mtime'] = mtime
+            self.messagelist[uid]["mtime"] = mtime
         self.save()
 
     def savemessageslabelsbulk(self, labels):
         """Saves labels from a dictionary in a single database operation."""
 
         for uid, lb in list(labels.items()):
-            self.messagelist[uid]['labels'] = lb
+            self.messagelist[uid]["labels"] = lb
         self.save()
 
     def addmessageslabels(self, uids, labels):
         for uid in uids:
-            self.messagelist[uid]['labels'] = self.messagelist[uid]['labels'] | labels
+            self.messagelist[uid]["labels"] = self.messagelist[uid]["labels"] | labels
         self.save()
 
     def deletemessageslabels(self, uids, labels):
         for uid in uids:
-            self.messagelist[uid]['labels'] = self.messagelist[uid]['labels'] - labels
+            self.messagelist[uid]["labels"] = self.messagelist[uid]["labels"] - labels
         self.save()
 
     def getmessagelabels(self, uid):
-        return self.messagelist[uid]['labels']
+        return self.messagelist[uid]["labels"]
 
     def savemessagesmtimebulk(self, mtimes):
         """Saves mtimes from the mtimes dictionary in a single database operation."""
 
         for uid, mt in list(mtimes.items()):
-            self.messagelist[uid]['mtime'] = mt
+            self.messagelist[uid]["mtime"] = mt
         self.save()
 
     def getmessagemtime(self, uid):
-        return self.messagelist[uid]['mtime']
+        return self.messagelist[uid]["mtime"]
 
     # Interface from BaseFolder
     def deletemessage(self, uid):
@@ -274,5 +276,5 @@ class LocalStatusFolder(BaseFolder):
             return
 
         for uid in uidlist:
-            del (self.messagelist[uid])
+            del self.messagelist[uid]
         self.save()

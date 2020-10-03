@@ -11,23 +11,23 @@ import os
 # we will walk through the values and will return the first
 # one that corresponds to the existing file.
 __DEF_OS_LOCATIONS = {
-    'freebsd': '/usr/local/share/certs/ca-root-nss.crt',
-    'openbsd': '/etc/ssl/cert.pem',
-    'dragonfly': '/etc/ssl/cert.pem',
-    'darwin': [
+    "freebsd": "/usr/local/share/certs/ca-root-nss.crt",
+    "openbsd": "/etc/ssl/cert.pem",
+    "dragonfly": "/etc/ssl/cert.pem",
+    "darwin": [
         # MacPorts, port curl-ca-bundle
-        '/opt/local/share/curl/curl-ca-bundle.crt',
+        "/opt/local/share/curl/curl-ca-bundle.crt",
         # homebrew, package openssl
-        '/usr/local/etc/openssl/cert.pem',
+        "/usr/local/etc/openssl/cert.pem",
     ],
-    'linux-ubuntu': '/etc/ssl/certs/ca-certificates.crt',
-    'linux-debian': '/etc/ssl/certs/ca-certificates.crt',
-    'linux-gentoo': '/etc/ssl/certs/ca-certificates.crt',
-    'linux-fedora': '/etc/pki/tls/certs/ca-bundle.crt',
-    'linux-redhat': '/etc/pki/tls/certs/ca-bundle.crt',
-    'linux-suse': '/etc/ssl/ca-bundle.pem',
-    'linux-opensuse': '/etc/ssl/ca-bundle.pem',
-    'linux-arch': '/etc/ssl/certs/ca-certificates.crt',
+    "linux-ubuntu": "/etc/ssl/certs/ca-certificates.crt",
+    "linux-debian": "/etc/ssl/certs/ca-certificates.crt",
+    "linux-gentoo": "/etc/ssl/certs/ca-certificates.crt",
+    "linux-fedora": "/etc/pki/tls/certs/ca-bundle.crt",
+    "linux-redhat": "/etc/pki/tls/certs/ca-bundle.crt",
+    "linux-suse": "/etc/ssl/ca-bundle.pem",
+    "linux-opensuse": "/etc/ssl/ca-bundle.pem",
+    "linux-arch": "/etc/ssl/certs/ca-certificates.crt",
 }
 
 
@@ -44,11 +44,11 @@ def get_os_name():
     """
     OS = platform.system().lower()
 
-    if OS.startswith('linux'):
+    if OS.startswith("linux"):
         DISTRO = platform.linux_distribution()[0]
         if DISTRO:
             OS = OS + "-%s" % DISTRO.split()[0].lower()
-        if os.path.exists('/etc/arch-release'):
+        if os.path.exists("/etc/arch-release"):
             OS = "linux-arch"
 
     return OS
@@ -64,15 +64,13 @@ def get_os_sslcertfile_searchpath():
     Returned value of None means that there is no search path
     at all.
     """
-
     OS = get_os_name()
-
-    l = None
+    location = None
     if OS in __DEF_OS_LOCATIONS:
-        l = __DEF_OS_LOCATIONS[OS]
-        if not hasattr(l, '__iter__'):
-            l = (l,)
-    return l
+        location = __DEF_OS_LOCATIONS[OS]
+        if not hasattr(location, "__iter__"):
+            location = (location,)
+    return location
 
 
 def get_os_sslcertfile():
@@ -84,14 +82,11 @@ def get_os_sslcertfile():
     no known CA certificate file or all known locations
     correspond to non-existing filesystem objects.
     """
-
-    l = get_os_sslcertfile_searchpath()
-    if l is None:
+    location = get_os_sslcertfile_searchpath()
+    if location is None:
         return None
-
-    for f in l:
-        assert (type(f) == type(""))
+    for f in location:
+        assert isinstance(f, str)
         if os.path.exists(f) and (os.path.isfile(f) or os.path.islink(f)):
             return f
-
     return None

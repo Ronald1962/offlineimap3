@@ -28,6 +28,7 @@ class GmailRepository(IMAPRepository):
     specifying the hostname, port etc. See
     http://mail.google.com/support/bin/answer.py?answer=78799&topic=12814
     for the values we use."""
+
     def __init__(self, reposname, account):
         """Initialize a GmailRepository object."""
         IMAPRepository.__init__(self, reposname, account)
@@ -75,7 +76,7 @@ class GmailRepository(IMAPRepository):
             return port
 
     def getssl(self):
-        ssl = self.getconfboolean('ssl', None)
+        ssl = self.getconfboolean("ssl", None)
 
         if ssl is None:
             # Nothing was configured, return our default setting for
@@ -89,19 +90,18 @@ class GmailRepository(IMAPRepository):
         return None
 
     def getfolder(self, foldername, decode=True):
-        return self.getfoldertype()(self.imapserver, foldername,
-                                    self, decode)
+        return self.getfoldertype()(self.imapserver, foldername, self, decode)
 
     def getfoldertype(self):
         return folder.Gmail.GmailFolder
 
     def gettrashfolder(self):
         # Where deleted mail should be moved
-        return self.getconf('trashfolder', '[Gmail]/Trash')
+        return self.getconf("trashfolder", "[Gmail]/Trash")
 
     def getspamfolder(self):
         # Depending on the IMAP settings (Settings -> Forwarding and
         # POP/IMAP -> IMAP Access -> "When I mark a message in IMAP as
         # deleted") GMail might also deletes messages upon EXPUNGE in
         # the Spam folder.
-        return self.getconf('spamfolder', '[Gmail]/Spam')
+        return self.getconf("spamfolder", "[Gmail]/Spam")

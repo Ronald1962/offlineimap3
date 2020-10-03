@@ -78,11 +78,10 @@ def writeIntermediateFile(accountname):
         _mbnames.write()
 
 
-class _IntermediateMbnames():
+class _IntermediateMbnames:
     """mbnames data for one account."""
 
-    def __init__(self, accountname, folder_root, mbnamesdir, folderfilter,
-                 dry_run, ui):
+    def __init__(self, accountname, folder_root, mbnamesdir, folderfilter, dry_run, ui):
 
         self.ui = ui
         self._foldernames = []
@@ -106,17 +105,18 @@ class _IntermediateMbnames():
 
         for foldername in self._foldernames:
             if self._folderfilter(self._accountname, foldername):
-                itemlist.append({
-                    'accountname': self._accountname,
-                    'foldername': foldername,
-                    'localfolders': self._folder_root,
-                })
+                itemlist.append(
+                    {
+                        "accountname": self._accountname,
+                        "foldername": foldername,
+                        "localfolders": self._folder_root,
+                    }
+                )
 
         if self._dryrun:
             self.ui.info("mbnames would write %s" % self._path)
         else:
-            with open(
-                    self._path, "w", encoding='utf-8') as intermediateFD:
+            with open(self._path, "w", encoding="utf-8") as intermediateFD:
                 json.dump(itemlist, intermediateFD)
 
 
@@ -134,7 +134,7 @@ class _Mbnames:
         self._mbnamesdir = None
         self._path = None
         self._folderfilter = lambda accountname, foldername: True
-        self._func_sortkey = lambda d: (d['accountname'], d['foldername'])
+        self._func_sortkey = lambda d: (d["accountname"], d["foldername"])
         localeval = config.getlocaleval()
         mbnamesdir = path.join(config.getmetadatadir(), "mbnames")
         self._peritem = None
@@ -150,31 +150,31 @@ class _Mbnames:
         self._mbnamesdir = mbnamesdir
 
         try:
-            self._enabled = self._config.getdefaultboolean(
-                "mbnames", "enabled", False)
+            self._enabled = self._config.getdefaultboolean("mbnames", "enabled", False)
             self._peritem = self._config.get("mbnames", "peritem", raw=1)
             self._header = localeval.eval(config.get("mbnames", "header"))
             self._sep = localeval.eval(config.get("mbnames", "sep"))
             self._footer = localeval.eval(config.get("mbnames", "footer"))
 
             xforms = [path.expanduser, path.expandvars]
-            self._path = config.apply_xforms(
-                config.get("mbnames", "filename"), xforms)
+            self._path = config.apply_xforms(config.get("mbnames", "filename"), xforms)
 
             if self._config.has_option("mbnames", "sort_keyfunc"):
                 self._func_sortkey = localeval.eval(
-                    self._config.get("mbnames", "sort_keyfunc"), {'re': re})
+                    self._config.get("mbnames", "sort_keyfunc"), {"re": re}
+                )
 
             if self._config.has_option("mbnames", "folderfilter"):
                 self._folderfilter = localeval.eval(
-                    self._config.get("mbnames", "folderfilter"), {'re': re})
+                    self._config.get("mbnames", "folderfilter"), {"re": re}
+                )
         except NoSectionError:
             pass
 
     def _iterIntermediateFiles(self):
         for foo in listdir(self._mbnamesdir):
             foo = path.join(self._mbnamesdir, foo)
-            if path.isfile(foo) and foo[-5:] == '.json':
+            if path.isfile(foo) and foo[-5:] == ".json":
                 yield foo
 
     def _removeIntermediateFile(self, path):
@@ -202,7 +202,8 @@ class _Mbnames:
     def get_incremental(self):
         if self._incremental is None:
             self._incremental = self._config.getdefaultboolean(
-                "mbnames", "incremental", False)
+                "mbnames", "incremental", False
+            )
 
         return self._incremental
 
@@ -230,19 +231,22 @@ class _Mbnames:
 
         for intermediateFile in self._iterIntermediateFiles():
             try:
-                with open(
-                        intermediateFile, 'r', encoding="utf-8") as intermediateFD:
+                with open(intermediateFile, "r", encoding="utf-8") as intermediateFD:
                     for item in json.load(intermediateFD):
                         itemlist.append(item)
             except (OSError, IOError) as e:
-                self.ui.error("could not read intermediate mbnames file '%s':"
-                              "%s" % (intermediateFile, str(e)))
+                self.ui.error(
+                    "could not read intermediate mbnames file '%s':"
+                    "%s" % (intermediateFile, str(e))
+                )
             except Exception as e:
                 self.ui.error(
                     e,
                     exc_info()[2],
-                    ("intermediate mbnames file %s not properly read" %
-                     intermediateFile)
+                    (
+                        "intermediate mbnames file %s not properly read"
+                        % intermediateFile
+                    ),
                 )
 
         itemlist.sort(key=self._func_sortkey)
@@ -252,8 +256,7 @@ class _Mbnames:
             self.ui.info("mbnames would write %s" % self._path)
         else:
             try:
-                with open(
-                        self._path, 'w', encoding='utf-8') as mbnamesFile:
+                with open(self._path, "w", encoding="utf-8") as mbnamesFile:
                     mbnamesFile.write(self._header)
                     mbnamesFile.write(self._sep.join(itemlist))
                     mbnamesFile.write(self._footer)
@@ -261,7 +264,7 @@ class _Mbnames:
                 self.ui.error(
                     e,
                     exc_info()[2],
-                    "mbnames file %s not properly written" % self._path
+                    "mbnames file %s not properly written" % self._path,
                 )
 
     def writeIntermediateFile(self, accountname):
@@ -271,5 +274,5 @@ class _Mbnames:
             self.ui.error(
                 e,
                 exc_info()[2],
-                "intermediate mbnames file %s not properly written" % self._path
+                "intermediate mbnames file %s not properly written" % self._path,
             )

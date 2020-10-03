@@ -43,22 +43,25 @@ class IMAPRepository(BaseRepository):
         self.kathread = None
 
         # Only set the newmail_hook in an IMAP repository.
-        if self.config.has_option(self.getsection(), 'newmail_hook'):
-            self.newmail_hook = self.localeval.eval(
-                self.getconf('newmail_hook'))
+        if self.config.has_option(self.getsection(), "newmail_hook"):
+            self.newmail_hook = self.localeval.eval(self.getconf("newmail_hook"))
 
-        if self.getconf('sep', None):
-            self.ui.info("The 'sep' setting is being ignored for IMAP "
-                         "repository '%s' (it's autodetected)" % self)
+        if self.getconf("sep", None):
+            self.ui.info(
+                "The 'sep' setting is being ignored for IMAP "
+                "repository '%s' (it's autodetected)" % self
+            )
 
     def startkeepalive(self):
         keepalivetime = self.getkeepalive()
         if not keepalivetime:
             return
         self.kaevent = Event()
-        self.kathread = ExitNotifyThread(target=self.imapserver.keepalive,
-                                         name="Keep alive " + self.getname(),
-                                         args=(keepalivetime, self.kaevent))
+        self.kathread = ExitNotifyThread(
+            target=self.imapserver.keepalive,
+            name="Keep alive " + self.getname(),
+            args=(keepalivetime, self.kaevent),
+        )
         self.kathread.setDaemon(1)
         self.kathread.start()
 
@@ -81,10 +84,10 @@ class IMAPRepository(BaseRepository):
         """Return a list of UIDs to not copy for this foldername."""
 
         if self.copy_ignore_eval is None:
-            if self.config.has_option(self.getsection(),
-                                      'copy_ignore_eval'):
+            if self.config.has_option(self.getsection(), "copy_ignore_eval"):
                 self.copy_ignore_eval = self.localeval.eval(
-                    self.getconf('copy_ignore_eval'))
+                    self.getconf("copy_ignore_eval")
+                )
             else:
                 self.copy_ignore_eval = lambda x: None
 
@@ -106,9 +109,11 @@ class IMAPRepository(BaseRepository):
 
         This requires that self.imapserver has been initialized with an
         acquireconnection() or it will still be `None`"""
-        assert self.imapserver.delim is not None, "'%s' " \
-                                                  "repository called getsep() before the folder separator was " \
-                                                  "queried from the server" % self
+        assert self.imapserver.delim is not None, (
+            "'%s' "
+            "repository called getsep() before the folder separator was "
+            "queried from the server" % self
+        )
         return self.imapserver.delim
 
     def gethost(self):
@@ -119,8 +124,8 @@ class IMAPRepository(BaseRepository):
             return self._host
 
         # 1) Check for remotehosteval setting.
-        if self.config.has_option(self.getsection(), 'remotehosteval'):
-            host = self.getconf('remotehosteval')
+        if self.config.has_option(self.getsection(), "remotehosteval"):
+            host = self.getconf("remotehosteval")
             try:
                 host = self.localeval.eval(host)
             except Exception as e:
@@ -128,28 +133,31 @@ class IMAPRepository(BaseRepository):
                     "remotehosteval option for repository "
                     "'%s' failed:\n%s" % (self, e),
                     OfflineImapError.ERROR.REPO,
-                    exc_info()[2])
+                    exc_info()[2],
+                )
             if host:
                 self._host = host
                 return self._host
         # 2) Check for plain remotehost setting.
-        host = self.getconf('remotehost', None)
+        host = self.getconf("remotehost", None)
         if host is not None:
             self._host = host
             return self._host
 
         # No success.
-        raise OfflineImapError("No remote host for repository "
-                               "'%s' specified." % self, OfflineImapError.ERROR.REPO)
+        raise OfflineImapError(
+            "No remote host for repository " "'%s' specified." % self,
+            OfflineImapError.ERROR.REPO,
+        )
 
     def get_remote_identity(self):
         """Remote identity is used for certain SASL mechanisms
         (currently -- PLAIN) to inform server about the ID
         we want to authorize as instead of our login name."""
 
-        identity = self.getconf('remote_identity', default=None)
+        identity = self.getconf("remote_identity", default=None)
         if identity is not None:
-            identity = identity.encode('UTF-8')
+            identity = identity.encode("UTF-8")
         return identity
 
     def get_auth_mechanisms(self):
@@ -160,30 +168,31 @@ class IMAPRepository(BaseRepository):
         # due to the chosen-plaintext resistance.
         default = ["GSSAPI", "XOAUTH2", "CRAM-MD5", "PLAIN", "LOGIN"]
 
-        mechs = self.getconflist('auth_mechanisms', r',\s*',
-                                 default)
+        mechs = self.getconflist("auth_mechanisms", r",\s*", default)
 
         for m in mechs:
             if m not in supported:
-                raise OfflineImapError("Repository %s: " % self +
-                                       "unknown authentication mechanism '%s'" % m,
-                                       OfflineImapError.ERROR.REPO)
+                raise OfflineImapError(
+                    "Repository %s: " % self
+                    + "unknown authentication mechanism '%s'" % m,
+                    OfflineImapError.ERROR.REPO,
+                )
 
-        self.ui.debug('imap', "Using authentication mechanisms %s" % mechs)
+        self.ui.debug("imap", "Using authentication mechanisms %s" % mechs)
         return mechs
 
     def getuser(self):
         localeval = self.localeval
 
-        if self.config.has_option(self.getsection(), 'remoteusereval'):
-            user = self.getconf('remoteusereval')
+        if self.config.has_option(self.getsection(), "remoteusereval"):
+            user = self.getconf("remoteusereval")
             if user is not None:
-                return localeval.eval(user).encode('UTF-8')
+                return localeval.eval(user).encode("UTF-8")
 
-        if self.config.has_option(self.getsection(), 'remoteuser'):
+        if self.config.has_option(self.getsection(), "remoteuser"):
             # Assume the configuration file to be UTF-8 encoded so we must not
             # encode this string again.
-            user = self.getconf('remoteuser')
+            user = self.getconf("remoteuser")
             if user is not None:
                 return user
 
@@ -197,7 +206,7 @@ class IMAPRepository(BaseRepository):
                 return netrcentry[0]
 
         try:
-            netrcentry = netrc.netrc('/etc/netrc').authenticators(self.gethost())
+            netrcentry = netrc.netrc("/etc/netrc").authenticators(self.gethost())
         except IOError as inst:
             if inst.errno not in (errno.ENOENT, errno.EACCES):
                 raise
@@ -208,26 +217,26 @@ class IMAPRepository(BaseRepository):
     def getport(self):
         port = None
 
-        if self.config.has_option(self.getsection(), 'remoteporteval'):
-            port = self.getconf('remoteporteval')
+        if self.config.has_option(self.getsection(), "remoteporteval"):
+            port = self.getconf("remoteporteval")
         if port is not None:
             return self.localeval.eval(port)
 
-        return self.getconfint('remoteport', None)
+        return self.getconfint("remoteport", None)
 
     def getipv6(self):
-        return self.getconfboolean('ipv6', None)
+        return self.getconfboolean("ipv6", None)
 
     def getssl(self):
-        return self.getconfboolean('ssl', True)
+        return self.getconfboolean("ssl", True)
 
     def getsslclientcert(self):
         xforms = [os.path.expanduser, os.path.expandvars, os.path.abspath]
-        return self.getconf_xform('sslclientcert', xforms, None)
+        return self.getconf_xform("sslclientcert", xforms, None)
 
     def getsslclientkey(self):
         xforms = [os.path.expanduser, os.path.expandvars, os.path.abspath]
-        return self.getconf_xform('sslclientkey', xforms, None)
+        return self.getconf_xform("sslclientkey", xforms, None)
 
     def getsslcacertfile(self):
         """Determines CA bundle.
@@ -248,37 +257,43 @@ class IMAPRepository(BaseRepository):
         """
 
         xforms = [os.path.expanduser, os.path.expandvars, os.path.abspath]
-        cacertfile = self.getconf_xform('sslcacertfile', xforms, None)
+        cacertfile = self.getconf_xform("sslcacertfile", xforms, None)
         # Can't use above cacertfile because of abspath.
-        if self.getconf('sslcacertfile', None) == "OS-DEFAULT":
+        if self.getconf("sslcacertfile", None) == "OS-DEFAULT":
             cacertfile = get_os_sslcertfile()
             if cacertfile is None:
                 searchpath = get_os_sslcertfile_searchpath()
                 if searchpath:
-                    reason = "Default CA bundle was requested, " \
-                             "but no existing locations available.  " \
-                             "Tried %s." % (", ".join(searchpath))
+                    reason = (
+                        "Default CA bundle was requested, "
+                        "but no existing locations available.  "
+                        "Tried %s." % (", ".join(searchpath))
+                    )
                 else:
-                    reason = "Default CA bundle was requested, " \
-                             "but OfflineIMAP doesn't know any for your " \
-                             "current operating system."
+                    reason = (
+                        "Default CA bundle was requested, "
+                        "but OfflineIMAP doesn't know any for your "
+                        "current operating system."
+                    )
                 raise OfflineImapError(reason, OfflineImapError.ERROR.REPO)
         if cacertfile is None:
             return None
         if not os.path.isfile(cacertfile):
-            reason = "CA certfile for repository '%s' couldn't be found.  " \
-                     "No such file: '%s'" % (self.name, cacertfile)
+            reason = (
+                "CA certfile for repository '%s' couldn't be found.  "
+                "No such file: '%s'" % (self.name, cacertfile)
+            )
             raise OfflineImapError(reason, OfflineImapError.ERROR.REPO)
         return cacertfile
 
     def gettlslevel(self):
-        return self.getconf('tls_level', 'tls_compat')
+        return self.getconf("tls_level", "tls_compat")
 
     def getsslversion(self):
-        return self.getconf('ssl_version', None)
+        return self.getconf("ssl_version", None)
 
     def getstarttls(self):
-        return self.getconfboolean('starttls', True)
+        return self.getconfboolean("starttls", True)
 
     def get_ssl_fingerprint(self):
         """Return array of possible certificate fingerprints.
@@ -286,8 +301,8 @@ class IMAPRepository(BaseRepository):
         Configuration item cert_fingerprint can contain multiple
         comma-separated fingerprints in hex form."""
 
-        value = self.getconf('cert_fingerprint', "")
-        return [f.strip().lower().replace(":", "") for f in value.split(',') if f]
+        value = self.getconf("cert_fingerprint", "")
+        return [f.strip().lower().replace(":", "") for f in value.split(",") if f]
 
     def setoauth2_request_url(self, url):
         self.oauth2_request_url = url
@@ -296,75 +311,73 @@ class IMAPRepository(BaseRepository):
         if self.oauth2_request_url is not None:  # Use cached value if possible.
             return self.oauth2_request_url
 
-        self.setoauth2_request_url(self.getconf('oauth2_request_url', None))
+        self.setoauth2_request_url(self.getconf("oauth2_request_url", None))
         return self.oauth2_request_url
 
     def getoauth2_refresh_token(self):
-        refresh_token = self.getconf('oauth2_refresh_token', None)
+        refresh_token = self.getconf("oauth2_refresh_token", None)
         if refresh_token is None:
             refresh_token = self.localeval.eval(
-                self.getconf('oauth2_refresh_token_eval', "None")
+                self.getconf("oauth2_refresh_token_eval", "None")
             )
             if refresh_token is not None:
                 refresh_token = refresh_token.strip("\n")
         return refresh_token
 
     def getoauth2_access_token(self):
-        access_token = self.getconf('oauth2_access_token', None)
+        access_token = self.getconf("oauth2_access_token", None)
         if access_token is None:
             access_token = self.localeval.eval(
-                self.getconf('oauth2_access_token_eval', "None")
+                self.getconf("oauth2_access_token_eval", "None")
             )
             if access_token is not None:
                 access_token = access_token.strip("\n")
         return access_token
 
     def getoauth2_client_id(self):
-        client_id = self.getconf('oauth2_client_id', None)
+        client_id = self.getconf("oauth2_client_id", None)
         if client_id is None:
             client_id = self.localeval.eval(
-                self.getconf('oauth2_client_id_eval', "None")
+                self.getconf("oauth2_client_id_eval", "None")
             )
             if client_id is not None:
                 client_id = client_id.strip("\n")
         return client_id
 
     def getoauth2_client_secret(self):
-        client_secret = self.getconf('oauth2_client_secret', None)
+        client_secret = self.getconf("oauth2_client_secret", None)
         if client_secret is None:
             client_secret = self.localeval.eval(
-                self.getconf('oauth2_client_secret_eval', "None")
+                self.getconf("oauth2_client_secret_eval", "None")
             )
             if client_secret is not None:
                 client_secret = client_secret.strip("\n")
         return client_secret
 
     def getpreauthtunnel(self):
-        return self.getconf('preauthtunnel', None)
+        return self.getconf("preauthtunnel", None)
 
     def gettransporttunnel(self):
-        return self.getconf('transporttunnel', None)
+        return self.getconf("transporttunnel", None)
 
     def getreference(self):
-        return self.getconf('reference', '""')
+        return self.getconf("reference", '""')
 
     def getdecodefoldernames(self):
-        return self.getconfboolean('decodefoldernames', False)
+        return self.getconfboolean("decodefoldernames", False)
 
     def getidlefolders(self):
         if self.idlefolders is None:
-            self.idlefolders = self.localeval.eval(
-                self.getconf('idlefolders', '[]')
-            )
+            self.idlefolders = self.localeval.eval(self.getconf("idlefolders", "[]"))
         return self.idlefolders
 
     def getmaxconnections(self):
         num1 = len(self.getidlefolders())
-        num2 = self.getconfint('maxconnections', 1)
+        num2 = self.getconfint("maxconnections", 1)
         return max(num1, num2)
 
     def getexpunge(self):
-        return self.getconfboolean('expunge', True)
+        return self.getconfboolean("expunge", True)
 
     def getpassword(self):
         """Return the IMAP password for this repository.
@@ -381,22 +394,22 @@ class IMAPRepository(BaseRepository):
         If all strategies fail we return None."""
 
         # 1. Evaluate Repository 'remotepasseval'.
-        passwd = self.getconf('remotepasseval', None)
+        passwd = self.getconf("remotepasseval", None)
         if passwd is not None:
-            return self.localeval.eval(passwd).encode('utf-8')
+            return self.localeval.eval(passwd).encode("utf-8")
         # 2. Read password from Repository 'remotepass'.
-        password = self.getconf('remotepass', None)
+        password = self.getconf("remotepass", None)
         if password is not None:
             # Assume the configuration file to be UTF-8 encoded so we must not
             # encode this string again.
             return password
         # 3. Read password from file specified in Repository 'remotepassfile'.
-        passfile = self.getconf('remotepassfile', None)
+        passfile = self.getconf("remotepassfile", None)
         if passfile is not None:
-            fd = open(os.path.expanduser(passfile), 'r', 'utf-8')
+            fd = open(os.path.expanduser(passfile), "r", "utf-8")
             password = fd.readline().strip()
             fd.close()
-            return password.encode('UTF-8')
+            return password.encode("UTF-8")
         # 4. Read password from ~/.netrc.
         try:
             netrcentry = netrc.netrc().authenticators(self.gethost())
@@ -410,7 +423,7 @@ class IMAPRepository(BaseRepository):
                     return netrcentry[2]
         # 5. Read password from /etc/netrc.
         try:
-            netrcentry = netrc.netrc('/etc/netrc').authenticators(self.gethost())
+            netrcentry = netrc.netrc("/etc/netrc").authenticators(self.gethost())
         except IOError as inst:
             if inst.errno not in (errno.ENOENT, errno.EACCES):
                 raise
@@ -446,35 +459,34 @@ class IMAPRepository(BaseRepository):
         imapobj = self.imapserver.acquireconnection()
         # check whether to list all folders, or subscribed only
         listfunction = imapobj.list
-        if self.getconfboolean('subscribedonly', False):
+        if self.getconfboolean("subscribedonly", False):
             listfunction = imapobj.lsub
 
         try:
-            result, listresult = listfunction(directory=self.imapserver.reference, pattern='"*"')
-            if result != 'OK':
-                raise OfflineImapError("Could not list the folders for"
-                                       " repository %s. Server responded: %s" %
-                                       (self.name, self, str(listresult)),
-                                       OfflineImapError.ERROR.FOLDER)
+            result, listresult = listfunction(
+                directory=self.imapserver.reference, pattern='"*"'
+            )
+            if result != "OK":
+                raise OfflineImapError(
+                    "Could not list the folders for"
+                    " repository %s. Server responded: %s"
+                    % (self.name, str(listresult))
+                )
         finally:
             self.imapserver.releaseconnection(imapobj)
 
         for s in listresult:
-            if s is None or (isinstance(s, str) and s == ''):
-                # Bug in imaplib: empty strings in results from
-                # literals. TODO: still relevant?
+            if s is None or (isinstance(s, str) and s == ""):
                 continue
             try:
                 flags, delim, name = imaputil.imapsplit(s)
             except ValueError:
-                self.ui.error(
-                    "could not correctly parse server response; got: %s" % s)
+                self.ui.error("could not correctly parse server response; got: %s" % s)
                 raise
             flaglist = [x.lower() for x in imaputil.flagsplit(flags)]
-            if '\\noselect' in flaglist:
+            if "\\noselect" in flaglist:
                 continue
-            retval.append(self.getfoldertype()(self.imapserver, name,
-                                               self))
+            retval.append(self.getfoldertype()(self.imapserver, name, self))
         # Add all folderincludes
         if len(self.folderincludes):
             imapobj = self.imapserver.acquireconnection()
@@ -486,11 +498,13 @@ class IMAPRepository(BaseRepository):
                         # couldn't select this folderinclude, so ignore folder.
                         if e.severity > OfflineImapError.ERROR.FOLDER:
                             raise
-                        self.ui.error(e, exc_info()[2],
-                                      'Invalid folderinclude:')
+                        self.ui.error(e, exc_info()[2], "Invalid folderinclude:")
                         continue
-                    retval.append(self.getfoldertype()(
-                        self.imapserver, foldername, self, decode=False))
+                    retval.append(
+                        self.getfoldertype()(
+                            self.imapserver, foldername, self, decode=False
+                        )
+                    )
             finally:
                 self.imapserver.releaseconnection(imapobj)
 
@@ -509,7 +523,9 @@ class IMAPRepository(BaseRepository):
                         self.obj = obj
 
                     def __cmp__(self, other):
-                        return mycmp(self.obj.getvisiblename(), other.obj.getvisiblename())
+                        return mycmp(
+                            self.obj.getvisiblename(), other.obj.getvisiblename()
+                        )
 
                 return K
 
@@ -526,10 +542,12 @@ class IMAPRepository(BaseRepository):
         imapobj = self.imapserver.acquireconnection()
         try:
             result = imapobj.delete(foldername)
-            if result[0] != 'OK':
-                raise OfflineImapError("Folder '%s'[%s] could not be deleted. "
-                                       "Server responded: %s" % (foldername, self, str(result)),
-                                       OfflineImapError.ERROR.FOLDER)
+            if result[0] != "OK":
+                raise OfflineImapError(
+                    "Folder '%s'[%s] could not be deleted. "
+                    "Server responded: %s" % (foldername, self, str(result)),
+                    OfflineImapError.ERROR.FOLDER,
+                )
         finally:
             self.imapserver.releaseconnection(imapobj)
 
@@ -542,7 +560,7 @@ class IMAPRepository(BaseRepository):
 
         :param foldername: Full path of the folder to be created."""
 
-        if foldername == '':
+        if foldername == "":
             return
 
         if self.getreference() != '""':
@@ -553,12 +571,12 @@ class IMAPRepository(BaseRepository):
             return
 
         parts = foldername.split(self.getsep())
-        folder_paths = [self.getsep().join(parts[:n + 1]) for n in range(len(parts))]
+        folder_paths = [self.getsep().join(parts[: n + 1]) for n in range(len(parts))]
         for folder_path in folder_paths:
             try:
                 self.makefolder_single(folder_path)
             except OfflineImapError as e:
-                if '[ALREADYEXISTS]' not in e.reason:
+                if "[ALREADYEXISTS]" not in e.reason:
                     raise
 
     def makefolder_single(self, foldername):
@@ -571,10 +589,12 @@ class IMAPRepository(BaseRepository):
                 foldername = imaputil.utf8_IMAP(foldername)
 
             result = imapobj.create(foldername)
-            if result[0] != 'OK':
-                raise OfflineImapError("Folder '%s'[%s] could not be created. "
-                                       "Server responded: %s" % (foldername, self, str(result)),
-                                       OfflineImapError.ERROR.FOLDER)
+            if result[0] != "OK":
+                raise OfflineImapError(
+                    "Folder '%s'[%s] could not be created. "
+                    "Server responded: %s" % (foldername, self, str(result)),
+                    OfflineImapError.ERROR.FOLDER,
+                )
         finally:
             self.imapserver.releaseconnection(imapobj)
 

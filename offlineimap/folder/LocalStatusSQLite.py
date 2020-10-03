@@ -56,6 +56,7 @@ class LocalStatusSQLiteFolder(BaseFolder):
     connection and cursor for all operations. This is a big disadvantage
     and we might want to investigate if we cannot hold an object open
     for a thread somehow."""
+
     # Though. According to sqlite docs, you need to commit() before
     # the connection is closed or your changes will be lost!
     # get db connection which autocommits
@@ -69,7 +70,7 @@ class LocalStatusSQLiteFolder(BaseFolder):
     locks = {}  # Key: filename, value: DatabaseFileLock instance.
 
     def __init__(self, name, repository):
-        self.sep = '.'  # Needs to be set before super().__init__().
+        self.sep = "."  # Needs to be set before super().__init__().
         super(LocalStatusSQLiteFolder, self).__init__(name, repository)
         self.root = repository.root
         self.filename = os.path.join(self.getroot(), self.getfolderbasename())
@@ -80,8 +81,7 @@ class LocalStatusSQLiteFolder(BaseFolder):
         if not os.path.exists(dirname):
             os.makedirs(dirname)
         if not os.path.isdir(dirname):
-            raise UserWarning("SQLite database path '%s' is not a directory." %
-                              dirname)
+            raise UserWarning("SQLite database path '%s' is not a directory." % dirname)
 
         self.connection = None
         # The lock serialize the writing/open/close of database accross threads.
@@ -104,26 +104,28 @@ class LocalStatusSQLiteFolder(BaseFolder):
 
     def openfiles(self):
         # Make sure sqlite is in multithreading SERIALIZE mode.
-        assert sqlite.threadsafety == 1, 'Your sqlite is not multithreading safe.'
+        assert sqlite.threadsafety == 1, "Your sqlite is not multithreading safe."
 
         with self._databaseFileLock.getLock():
             # Try to establish connection, no need for threadsafety in __init__.
             try:
-                self.connection = sqlite.connect(self.filename,
-                                                 check_same_thread=False)
+                self.connection = sqlite.connect(self.filename, check_same_thread=False)
                 self._databaseFileLock.registerNewUser()
             except sqlite.OperationalError as e:
                 # Operation had failed.
                 raise UserWarning(
                     "cannot open database file '%s': %s.\nYou might"
                     " want to check the rights to that file and if "
-                    "it cleanly opens with the 'sqlite<3>' command" %
-                    (self.filename, e), exc_info()[2])
+                    "it cleanly opens with the 'sqlite<3>' command"
+                    % (self.filename, e),
+                    exc_info()[2],
+                )
 
             # Test if db version is current enough and if db is readable.
             try:
                 cursor = self.connection.execute(
-                    "SELECT value from metadata WHERE key='db_version'")
+                    "SELECT value from metadata WHERE key='db_version'"
+                )
             except sqlite.DatabaseError:
                 # db file missing or corrupt, recreate it.
                 self.__create_db()
@@ -139,8 +141,7 @@ class LocalStatusSQLiteFolder(BaseFolder):
         try:
             os.unlink(self.filename)
         except OSError as e:
-            self.ui.debug('', "could not remove file %s: %s" %
-                          (self.filename, e))
+            self.ui.debug("", "could not remove file %s: %s" % (self.filename, e))
 
     def storesmessages(self):
         return False
@@ -180,10 +181,10 @@ class LocalStatusSQLiteFolder(BaseFolder):
                     if not self._in_transactions:
                         self.connection.commit()
             except sqlite.OperationalError as e:
-                if e.args[0] == 'cannot commit - no transaction is active':
+                if e.args[0] == "cannot commit - no transaction is active":
                     pass
-                elif e.args[0] == 'database is locked':
-                    self.ui.debug('', "Locked sqlite database, retrying.")
+                elif e.args[0] == "database is locked":
+                    self.ui.debug("", "Locked sqlite database, retrying.")
                     success = False
                 else:
                     raise
@@ -193,18 +194,21 @@ class LocalStatusSQLiteFolder(BaseFolder):
 
         if self.connection is not None:
             self.connection.close()  # Close old connections first.
-        self.connection = sqlite.connect(self.filename,
-                                         check_same_thread=False)
+        self.connection = sqlite.connect(self.filename, check_same_thread=False)
 
         # Upgrade from database version 1 to version 2
         # This change adds labels and mtime columns, to be used by Gmail IMAP and Maildir folders.
         if from_ver <= 1:
-            self.ui._msg('Upgrading LocalStatus cache from version 1 to version 2 for %s:%s' %
-                         (self.repository, self))
-            self.connection.executescript("""ALTER TABLE status ADD mtime INTEGER DEFAULT 0;
+            self.ui._msg(
+                "Upgrading LocalStatus cache from version 1 to version 2 for %s:%s"
+                % (self.repository, self)
+            )
+            self.connection.executescript(
+                """ALTER TABLE status ADD mtime INTEGER DEFAULT 0;
                                              ALTER TABLE status ADD labels VARCHAR(256) DEFAULT '';
                                              UPDATE metadata SET value='2' WHERE key='db_version';
-                                          """)
+                                          """
+            )
             self.connection.commit()
 
         # Future version upgrades come here...
@@ -216,31 +220,33 @@ class LocalStatusSQLiteFolder(BaseFolder):
 
         self.connection must point to the opened and valid SQlite
         database connection."""
-        self.ui._msg('Creating new Local Status db for %s:%s' %
-                     (self.repository, self))
-        self.connection.executescript("""
+        self.ui._msg("Creating new Local Status db for %s:%s" % (self.repository, self))
+        self.connection.executescript(
+            """
         CREATE TABLE metadata (key VARCHAR(50) PRIMARY KEY, value VARCHAR(128));
         INSERT INTO metadata VALUES('db_version', '2');
         CREATE TABLE status (id INTEGER PRIMARY KEY, flags VARCHAR(50), mtime INTEGER, labels VARCHAR(256));
-        """)
+        """
+        )
         self.connection.commit()
         self._newfolder = True
 
     # Interface from BaseFolder
     def msglist_item_initializer(self, uid):
-        return {'uid': uid, 'flags': set(), 'labels': set(), 'time': 0, 'mtime': 0}
+        return {"uid": uid, "flags": set(), "labels": set(), "time": 0, "mtime": 0}
 
     # Interface from BaseFolder
     def cachemessagelist(self):
         self.dropmessagelistcache()
-        cursor = self.connection.execute('SELECT id,flags,mtime,labels from status')
+        cursor = self.connection.execute("SELECT id,flags,mtime,labels from status")
         for row in cursor:
             uid = row[0]
             self.messagelist[uid] = self.msglist_item_initializer(uid)
             flags = set(row[1])
             try:
-                labels = set([lb.strip() for lb in
-                              row[3].split(',') if len(lb.strip()) > 0])
+                labels = set(
+                    [lb.strip() for lb in row[3].split(",") if len(lb.strip()) > 0]
+                )
             except AttributeError:
                 # FIXME: This except clause was introduced because row[3] from
                 # database can be found of unexpected type NoneType. See
@@ -253,9 +259,9 @@ class LocalStatusSQLiteFolder(BaseFolder):
                 # Also, since database might return None, we have to fix the
                 # database, too.
                 labels = set()
-            self.messagelist[uid]['flags'] = flags
-            self.messagelist[uid]['labels'] = labels
-            self.messagelist[uid]['mtime'] = row[2]
+            self.messagelist[uid]["flags"] = flags
+            self.messagelist[uid]["labels"] = labels
+            self.messagelist[uid]["mtime"] = row[2]
 
     def closefiles(self):
         with self._databaseFileLock.getLock():
@@ -263,7 +269,7 @@ class LocalStatusSQLiteFolder(BaseFolder):
             if self._databaseFileLock.shouldClose():
                 try:
                     self.connection.close()
-                except:
+                except Exception:
                     pass
 
     # Interface from LocalStatusFolder
@@ -277,14 +283,17 @@ class LocalStatusSQLiteFolder(BaseFolder):
         with self._databaseFileLock.getLock():
             data = []
             for uid, msg in list(self.messagelist.items()):
-                mtime = msg['mtime']
-                flags = ''.join(sorted(msg['flags']))
-                labels = ', '.join(sorted(msg['labels']))
+                mtime = msg["mtime"]
+                flags = "".join(sorted(msg["flags"]))
+                labels = ", ".join(sorted(msg["labels"]))
                 data.append((uid, flags, mtime, labels))
 
-            self.__sql_write('INSERT OR REPLACE INTO status '
-                             '(id,flags,mtime,labels) VALUES (?,?,?,?)',
-                             data, executemany=True)
+            self.__sql_write(
+                "INSERT OR REPLACE INTO status "
+                "(id,flags,mtime,labels) VALUES (?,?,?,?)",
+                data,
+                executemany=True,
+            )
 
     # Following some pure SQLite functions, where we chose to use
     # BaseFolder() methods instead. Doing those on the in-memory list is
@@ -339,87 +348,103 @@ class LocalStatusSQLiteFolder(BaseFolder):
             return uid
 
         self.messagelist[uid] = self.msglist_item_initializer(uid)
-        self.messagelist[uid] = {'uid': uid, 'flags': flags, 'time': rtime, 'mtime': mtime, 'labels': labels}
-        flags = ''.join(sorted(flags))
-        labels = ', '.join(sorted(labels))
+        self.messagelist[uid] = {
+            "uid": uid,
+            "flags": flags,
+            "time": rtime,
+            "mtime": mtime,
+            "labels": labels,
+        }
+        flags = "".join(sorted(flags))
+        labels = ", ".join(sorted(labels))
         try:
-            self.__sql_write('INSERT INTO status (id,flags,mtime,labels) VALUES (?,?,?,?)',
-                             (uid, flags, mtime, labels))
+            self.__sql_write(
+                "INSERT INTO status (id,flags,mtime,labels) VALUES (?,?,?,?)",
+                (uid, flags, mtime, labels),
+            )
         except Exception as e:
-            raise UserWarning("%s while inserting UID %s" %
-                              (str(e), str(uid)),
-                              exc_info()[2])
+            raise UserWarning(
+                "%s while inserting UID %s" % (str(e), str(uid)), exc_info()[2]
+            )
         return uid
 
     # Interface from BaseFolder
     def savemessageflags(self, uid, flags):
         assert self.uidexists(uid)
-        self.messagelist[uid]['flags'] = flags
-        flags = ''.join(sorted(flags))
-        self.__sql_write('UPDATE status SET flags=? WHERE id=?', (flags, uid))
+        self.messagelist[uid]["flags"] = flags
+        flags = "".join(sorted(flags))
+        self.__sql_write("UPDATE status SET flags=? WHERE id=?", (flags, uid))
 
     def getmessageflags(self, uid):
-        return self.messagelist[uid]['flags']
+        return self.messagelist[uid]["flags"]
 
     def savemessagelabels(self, uid, labels, mtime=None):
-        self.messagelist[uid]['labels'] = labels
+        self.messagelist[uid]["labels"] = labels
         if mtime:
-            self.messagelist[uid]['mtime'] = mtime
+            self.messagelist[uid]["mtime"] = mtime
 
-        labels = ', '.join(sorted(labels))
+        labels = ", ".join(sorted(labels))
         if mtime:
-            self.__sql_write('UPDATE status SET labels=?, mtime=? WHERE id=?', (labels, mtime, uid))
+            self.__sql_write(
+                "UPDATE status SET labels=?, mtime=? WHERE id=?", (labels, mtime, uid)
+            )
         else:
-            self.__sql_write('UPDATE status SET labels=? WHERE id=?', (labels, uid))
+            self.__sql_write("UPDATE status SET labels=? WHERE id=?", (labels, uid))
 
     def savemessageslabelsbulk(self, labels):
         """
         Saves labels from a dictionary in a single database operation.
 
         """
-        data = [(', '.join(sorted(l)), uid) for uid, l in list(labels.items())]
-        self.__sql_write('UPDATE status SET labels=? WHERE id=?', data, executemany=True)
+        data = [(", ".join(sorted(l)), uid) for uid, l in list(labels.items())]
+        self.__sql_write(
+            "UPDATE status SET labels=? WHERE id=?", data, executemany=True
+        )
         for uid, l in list(labels.items()):
-            self.messagelist[uid]['labels'] = l
+            self.messagelist[uid]["labels"] = l
 
     def addmessageslabels(self, uids, labels):
         data = []
         for uid in uids:
-            newlabels = self.messagelist[uid]['labels'] | labels
-            data.append((', '.join(sorted(newlabels)), uid))
-        self.__sql_write('UPDATE status SET labels=? WHERE id=?', data, executemany=True)
+            newlabels = self.messagelist[uid]["labels"] | labels
+            data.append((", ".join(sorted(newlabels)), uid))
+        self.__sql_write(
+            "UPDATE status SET labels=? WHERE id=?", data, executemany=True
+        )
         for uid in uids:
-            self.messagelist[uid]['labels'] = self.messagelist[uid]['labels'] | labels
+            self.messagelist[uid]["labels"] = self.messagelist[uid]["labels"] | labels
 
     def deletemessageslabels(self, uids, labels):
         data = []
         for uid in uids:
-            newlabels = self.messagelist[uid]['labels'] - labels
-            data.append((', '.join(sorted(newlabels)), uid))
-        self.__sql_write('UPDATE status SET labels=? WHERE id=?', data, executemany=True)
+            newlabels = self.messagelist[uid]["labels"] - labels
+            data.append((", ".join(sorted(newlabels)), uid))
+        self.__sql_write(
+            "UPDATE status SET labels=? WHERE id=?", data, executemany=True
+        )
         for uid in uids:
-            self.messagelist[uid]['labels'] = self.messagelist[uid]['labels'] - labels
+            self.messagelist[uid]["labels"] = self.messagelist[uid]["labels"] - labels
 
     def getmessagelabels(self, uid):
-        return self.messagelist[uid]['labels']
+        return self.messagelist[uid]["labels"]
 
     def savemessagesmtimebulk(self, mtimes):
         """Saves mtimes from the mtimes dictionary in a single database operation."""
 
         data = [(mt, uid) for uid, mt in list(mtimes.items())]
-        self.__sql_write('UPDATE status SET mtime=? WHERE id=?', data, executemany=True)
+        self.__sql_write("UPDATE status SET mtime=? WHERE id=?", data, executemany=True)
         for uid, mt in list(mtimes.items()):
-            self.messagelist[uid]['mtime'] = mt
+            self.messagelist[uid]["mtime"] = mt
 
     def getmessagemtime(self, uid):
-        return self.messagelist[uid]['mtime']
+        return self.messagelist[uid]["mtime"]
 
     # Interface from BaseFolder
     def deletemessage(self, uid):
         if uid not in self.messagelist:
             return
-        self.__sql_write('DELETE FROM status WHERE id=?', (uid,))
-        del (self.messagelist[uid])
+        self.__sql_write("DELETE FROM status WHERE id=?", (uid,))
+        del self.messagelist[uid]
 
     # Interface from BaseFolder
     def deletemessages(self, uidlist):
@@ -434,6 +459,6 @@ class LocalStatusSQLiteFolder(BaseFolder):
         if not len(uidlist):
             return
         # arg2 needs to be an iterable of 1-tuples [(1,),(2,),...]
-        self.__sql_write('DELETE FROM status WHERE id=?', list(zip(uidlist, )), True)
+        self.__sql_write("DELETE FROM status WHERE id=?", list(zip(uidlist)), True)
         for uid in uidlist:
-            del (self.messagelist[uid])
+            del self.messagelist[uid]
