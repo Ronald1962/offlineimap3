@@ -19,7 +19,9 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install flake8 pytest
+        pip install flake8
+        pip install pytest
+        pip install pytest-cov
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
     - name: Lint with flake8
       run: |
@@ -29,4 +31,14 @@ jobs:
         flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
     - name: Test with pytest
       run: |
-        pytest
+        pytest test_imap_commander.py --doctest-modules --junitxml=junit/test-results.xml --cov=imapcommander --cov-report=xml --cov-report=html
+    - name: Upload pytest test results
+      uses: actions/upload-artifact@v2
+      with:
+        name: pytest-results
+        path: |
+          junit/test-results.xml
+          htmlcov/
+          coverage.xml
+      # Use always() to always run this step to publish test results when there are test failures
+      if: ${{ always() }}
