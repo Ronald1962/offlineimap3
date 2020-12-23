@@ -31,7 +31,7 @@ jobs:
         flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
     - name: Test with pytest
       run: |
-        pytest test_imap_commander.py --doctest-modules --junitxml=junit/test-results.xml --cov=imapcommander --cov-report=xml --cov-report=html
+        pytest test_imapcommander.py --doctest-modules --junitxml=junit/test-results.xml --cov=imapcommander --cov-report=xml --cov-report=html
     - name: Upload pytest test results
       uses: actions/upload-artifact@v2
       with:
